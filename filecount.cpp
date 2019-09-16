@@ -17,12 +17,42 @@ namespace globals {
 
 
 /*--------------------------------------------------------*/
-static string get_filename(string& path) {
-    string fname;
-    auto delim = path.end()-1;
-    for (; *delim != '\\' || *delim != '/'; --delim);
-    copy(delim, path.end(), fname);
-    return fname;
+static void wait_key() {
+    fflush(stdin);
+    getchar();
+}
+
+
+/*--------------------------------------------------------*/
+static auto& format_word(string& word) {
+    if (word.empty()) return word;
+    word[0] = static_cast<char>(toupper(word[0]));
+    for_each(word.begin()+1, word.end(), [](char c) {
+        return static_cast<char>(toupper(c));});
+    return word;
+}
+
+
+/*--------------------------------------------------------*/
+template <bool Format>
+static auto split_line(const string& str, char delim = ' ') {
+    vector<string> words;
+    stringstream ss(str);
+    string word;
+    while (getline(ss, word, delim))
+        if constexpr (Format)
+            words.emplace_back(format_word(word));
+        else words.emplace_back(word);
+    return words;
+}
+
+
+/*--------------------------------------------------------*/
+static string get_filename(string path) {
+    string name;
+    transform(path.begin(), path.end(), name.begin(), [](char c) {
+        return (c == '\\') ? '/' : c; });
+    return split_line<false>(path, '/').back();
 }
 
 
@@ -40,8 +70,10 @@ static auto& sort_stats(T& words, S& srt_words) {
 /*--------------------------------------------------------*/
 template <typename T>
 static void display_stats(const T& words) {
+    printf("\n\n|------------------------------------------------\n");
     for (auto& w : words)
-        printf("%s => %d\n", w.second.c_str(), w.first);
+        printf("| %s => %d\n", w.second.c_str(), w.first);
+    printf("|------------------------------------------------");
 }
 
 
@@ -53,8 +85,8 @@ static void save_stats(const T& words) {
     ofstream out(fname);
     if (!out.is_open()) {
         puts("| Failed to write statistics!\a");
-        fflush(stdin);
-        getchar();}
+        wait_key();
+        exit(1);}
 
     for (auto& w : words)
         out << w.second << " => " << w.first << "\n";
@@ -72,37 +104,16 @@ static bool is_word(const string& word) {
 
 
 /*--------------------------------------------------------*/
-static auto& format_word(string& word) {
-    if (word.empty()) return word;
-    word[0] = static_cast<char>(toupper(word[0]));
-    for_each(word.begin()+1, word.end(), [](char c) {
-        return static_cast<char>(toupper(c));});
-    return word;
-}
-
-
-/*--------------------------------------------------------*/
-static auto split_line(const string& str) {
-    vector<string> words;
-    stringstream ss(str);
-    string word;
-    while (getline(ss, word, ' '))
-        words.emplace_back(format_word(word));
-    return words;
-}
-
-
-/*--------------------------------------------------------*/
 static void parse_file(string_view path) {
     ifstream in(path.data());
     if (!in.is_open()) {
         printf("Failed to open file \'%s\'\n", path.data());
-        return;}
+        exit(1);}
 
     string line;
     while (in) {
         getline(in, line);
-        auto words = split_line(line);
+        auto words = split_line<true>(line);
         for (string& w : words)
             if (is_word(w))
                 globals::cnt_words[w]++;
@@ -125,6 +136,7 @@ static void save_or_display_stats() {
             continue;}
         if (rep == 1) save_stats(globals::srt_words);
         else if (rep == 2) display_stats(globals::srt_words);
+        break;
     }
 }
 
@@ -132,15 +144,16 @@ static void save_or_display_stats() {
 /*--------------------------------------------------------*/
 int main(int argc, char** argv) {
     if (argc != 2) {
-        puts("Invalid command!");
-        puts("Usage: fc filepath");
-        fflush(stdin);
-        getchar();
+        puts("| Invalid command!\a");
+        puts("| Usage: fc filepath");
+        wait_key();
+        return 1;
     }
 
     globals::filepath = argv[1];
 
     parse_file(globals::filepath);
     save_or_display_stats();
+    wait_key();
     return 0;
 }
