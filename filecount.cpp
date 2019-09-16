@@ -1,77 +1,70 @@
+#include <iostream>
 #include <fstream>
+#include <vector>
+#include <map>
+#include <sstream>
+#include <string_view>
 #include <algorithm>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
+using namespace std;
 
 
-//===========================================================
-static void ShowStats(long lines, long letters, long words)
-{
-    printf("---------------------------------------\n");
-    printf("| Words: %ld\n", words);
-    printf("| Letters: %ld\n", letters);
-    printf("| Lines: %ld\n", lines);
-    printf("---------------------------------------\n");
-    fflush(stdin);
-    getchar();
+/*--------------------------------------------------------*/
+namespace globals {
+    static map<string, int> cnt_words;
 }
 
 
-//===========================================================
-static long Words(std::string& line)
-{
-    long count = 0;
-    auto* ch = strtok(const_cast<char*>(line.c_str()), " ");
-    while (ch != nullptr) {
-        ch = strtok(nullptr, " ");
-        ++count; }
-    return count;
+/*--------------------------------------------------------*/
+static bool is_word(const string& word) {
+    if (word.size() < 2) return false;
+    for (char c : word)
+        if (!isalpha(c))
+            return false;
+    return true;
 }
 
 
-//===========================================================
-static void Parse(const char* filepath)
-{
-    long words = 0;
-    long letters = 0;
-    long lines = 0;
-
-    std::string buffer;
-    buffer.reserve(0xfff);
-
-    std::ifstream file(filepath);
-    if (!file.is_open()) {
-        printf("Failed to open '%s'", filepath);
-        return;
-    }
-
-    while (std::getline(file, buffer))
-    {
-        lines += 1;
-
-        letters += std::count_if(buffer.begin(),
-            buffer.end(), [](char c) {
-            return !isspace(c);
-        });
-
-        words += Words(buffer);
-    }
-
-    ShowStats(lines, letters, words);
+/*--------------------------------------------------------*/
+static auto& format_word(string& word) {
+    if (word.empty()) return word;
+    word[0] = static_cast<char>(toupper(word[0]));
+    for_each(word.begin()+1, word.end(), [](char c) {
+        return static_cast<char>(toupper(c));});
+    return word;
 }
 
 
-//===========================================================
-int main(int argc, char** argv)
-{
-    if (argc != 2) {
-        puts("Invalid arguments!");
-        getchar();
-        return -1;
+/*--------------------------------------------------------*/
+static auto split_line(const string& str) {
+    vector<string> words;
+    stringstream ss(str);
+    string word;
+    while (getline(ss, word, ' '))
+        words.emplace_back(format_word(word));
+    return words;
+}
+
+
+/*--------------------------------------------------------*/
+static void parse_file(string_view path) {
+    ifstream in(path.data());
+    if (!in.is_open()) {
+        printf("Failed to open file \'%s\'\n", path.data());
+        return;}
+
+    string line;
+    while (in) {
+        getline(in, line);
+        auto words = split_line(line);
+        for (string& w : words)
+            if (is_word(w))
+                globals::cnt_words[w]++;
     }
+}
 
-    Parse(argv[1]);
 
+/*--------------------------------------------------------*/
+int main(int argc, char** argv) {
+    parse_file("C:\\Users\\User\\Desktop\\Programmig\\C_Cpp_Lessons\\main.cpp");
     return 0;
 }
