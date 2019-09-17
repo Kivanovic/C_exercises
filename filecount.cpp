@@ -1,6 +1,6 @@
 #include <fstream>
 #include <vector>
-#include <list>
+#include <chrono>
 #include <map>
 #include <sstream>
 #include <string_view>
@@ -13,6 +13,7 @@ namespace globals {
     static map<string, int> cnt_words;
     static vector<pair<int, string>> srt_words;
     static string filepath;
+    static chrono::duration<double> elapsed_time;
 }
 
 
@@ -57,6 +58,15 @@ static string get_filename(string path) {
 
 
 /*--------------------------------------------------------*/
+static void print_elaps() {
+    printf("\n|------------------------------------------------\n");
+    printf("| Filename: %s\n", get_filename(globals::filepath).c_str());
+    printf("| Time elapsed: %.3f seconds\n", globals::elapsed_time.count());
+    printf("|------------------------------------------------");
+}
+
+
+/*--------------------------------------------------------*/
 template <typename T, typename S>
 static auto& sort_stats(T& words, S& srt_words) {
     for (auto&[k, v] : words)
@@ -94,7 +104,7 @@ static void save_stats(const T& words) {
 
 
 /*--------------------------------------------------------*/
-static bool is_word(const string& word) {
+static inline bool is_word(const string& word) {
     if (word.size() < 2) return false;
     for (char c : word)
         if (!isalpha(c))
@@ -111,6 +121,8 @@ static void parse_file(string_view path) {
         exit(1);}
 
     string line;
+    auto start = std::chrono::high_resolution_clock::now();
+
     while (in) {
         getline(in, line);
         auto words = split_line<true>(line);
@@ -120,6 +132,9 @@ static void parse_file(string_view path) {
     }
 
     sort_stats(globals::cnt_words, globals::srt_words);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    globals::elapsed_time = end- start;
 }
 
 
@@ -154,6 +169,7 @@ int main(int argc, char** argv) {
 
     parse_file(globals::filepath);
     save_or_display_stats();
+    print_elaps();
     wait_key();
     return 0;
 }
